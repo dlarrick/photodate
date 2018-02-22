@@ -1,12 +1,15 @@
 #!/usr/bin/python
-
+""" Utility to set original date & approximate date in EXIF
+"""
 import optparse
 import re
 import math
-import pyexiv2
 import datetime
+import pyexiv2
 
 def validate_options(parser, options):
+    """ Validate command-line options
+    """
     if not options.year and not options.yearrange:
         parser.error("Need at least year or yearrange")
     if options.year and options.yearrange:
@@ -33,6 +36,8 @@ def validate_options(parser, options):
             parser.error("Invalid day")
 
 def validate_yearrange(yearrange):
+    """ Validate yearrange option, must be XXXX-YYYY with X < Y
+    """
     if not re.match('^[0-9]{4}-[0-9]{4}$', yearrange):
         return False
     try:
@@ -44,9 +49,13 @@ def validate_yearrange(yearrange):
         return False
 
 def validate_year(year):
+    """ Validate year option, must be YYYY
+    """
     return re.match('^[0-9]{4}$', year)
 
 def validate_month(month):
+    """ Validate month option, must be numeric 0-12
+    """
     try:
         monthnum = int(month)
         return monthnum < 13 and monthnum > 0
@@ -54,13 +63,17 @@ def validate_month(month):
         return False
 
 def validate_day(year, month, day):
+    """ Validate day option, must be a day in that month/year
+    """
     try:
-        trydate = datetime.date(int(year), int(month), int(day))
+        datetime.date(int(year), int(month), int(day))
         return True
     except ValueError:
         return False
 
 def make_exif_date(yearrange, year, month, day):
+    """ Construct datetime.date object from yearrange or year/month/day
+    """
     synyear = 0
     synmonth = 0
     synday = 0
@@ -90,7 +103,15 @@ def make_exif_date(yearrange, year, month, day):
     trydate = datetime.date(int(year), synmonth, synday)
     return trydate
 
+def make_exif_datetime(yearrange, year, month, day):
+    """ Construct datetime.datetime object from yearrange or year/month/day
+    """
+    exif_date = make_exif_date(yearrange, year, month, day)
+    return datetime.datetime(exif_date.year, exif_date.month, exif_date.day, 0, 0, 0)
+
 def make_approximate_date(yearrange, year, month, day):
+    """ Construct human approximate date string
+    """
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     if yearrange:
         return yearrange
@@ -101,6 +122,8 @@ def make_approximate_date(yearrange, year, month, day):
     return year
 
 def main():
+    """ Entry point
+    """
     parser = optparse.OptionParser(usage="usage: %prog [options] filename")
     parser.add_option('-Y', '--yearrange', action='store', type='string', dest='yearrange')
     parser.add_option('-y', '--year', action='store', type='string', dest='year')
@@ -115,11 +138,11 @@ def main():
         parser.error("Please supply a photo filename")
     validate_options(parser, options)
 
-    exif_date = make_exif_date(options.yearrange, options.year, options.month, options.day)
+    exif_datetime = make_exif_datetime(options.yearrange, options.year, options.month, options.day)
     approximate_date = make_approximate_date(
         options.yearrange, options.year, options.month, options.day)
 
-    print "exif_date is %s" % str(exif_date)
+    print "exif_datetime is %s" % str(exif_datetime)
     print "approximate_date is %s" % approximate_date
 
 if __name__ == '__main__':
