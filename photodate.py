@@ -2,7 +2,9 @@
 
 import optparse
 import re
+import math
 import pyexiv2
+import datetime
 
 def validate_options(parser, options):
     if not options.year and not options.yearrange:
@@ -19,7 +21,7 @@ def validate_options(parser, options):
             parser.error("Year should be XXXX")
     if options.month:
         if not validate_month(options.month):
-            parser.error("Month should be numeric")
+            parser.error("Invalid month (should be numeric)")
         if not options.year:
             parser.error("Month specified without year")
     if options.day:
@@ -30,8 +32,16 @@ def validate_options(parser, options):
         if not validate_day(options.year, options.month, options.day):
             parser.error("Invalid day")
 
-def validate_yearrange(range):
-    return re.match('^[0-9]{4}-[0-9]{4}$', range)
+def validate_yearrange(yearrange):
+    if not re.match('^[0-9]{4}-[0-9]{4}$', yearrange):
+        return False
+    try:
+        year1, year2 = yearrange.split('-')
+        if year1 >= year2:
+            return False
+        return True
+    except ValueError:
+        return False
 
 def validate_year(year):
     return re.match('^[0-9]{4}$', year)
@@ -44,15 +54,41 @@ def validate_month(month):
         return False
 
 def validate_day(year, month, day):
-    # FIXME, look at month / leapyear
     try:
-        daynum = int(day)
-        return daynum < 32 and daynum > 0
+        trydate = datetime.date(int(year), int(month), int(day))
+        return True
     except ValueError:
         return False
 
 def make_exif_date(yearrange, year, month, day):
-    return "NYI"
+    synyear = 0
+    synmonth = 0
+    synday = 0
+    if yearrange:
+        year1, year2 = yearrange.split('-')
+        if (int(year2) - int(year1)) % 2 == 1:
+            # Odd number of years, use J 1
+            synyear = int(math.ceil((float(year2) + float(year1)) / 2))
+            synmonth = 1
+            synday = 1
+        else:
+            # Even number of years, use June 1
+            synyear = int(math.floor((float(year2) + float(year1)) / 2))
+            synmonth = 6
+            synday = 1
+        trydate = datetime.date(synyear, synmonth, synday)
+        return trydate
+    if day:
+        trydate = datetime.date(int(year), int(month), int(day))
+        return trydate
+    if month:
+        synday = 15
+        trydate = datetime.date(int(year), int(month), synday)
+        return trydate
+    synmonth = 6
+    synday = 1
+    trydate = datetime.date(int(year), synmonth, synday)
+    return trydate
 
 def make_approximate_date(yearrange, year, month, day):
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
