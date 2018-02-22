@@ -55,7 +55,14 @@ def make_exif_date(yearrange, year, month, day):
     return "NYI"
 
 def make_approximate_date(yearrange, year, month, day):
-    return "NYI"
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    if yearrange:
+        return yearrange
+    if day:
+        return '%s %s, %s' % (months[int(month)], day, year)
+    if month:
+        return '%s %s' % (months[int(month)], year)
+    return year
 
 def main():
     parser = optparse.OptionParser(usage="usage: %prog [options] filename")
