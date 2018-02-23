@@ -12,8 +12,10 @@ def validate_options(parser, options):
     """
     if options.read:
         return True
-    if not options.year and not options.yearrange:
-        parser.error("Need at least year or yearrange")
+    havedate = options.year or options.yearrange
+    havecomment = options.comment or options.people or options.location
+    if not havedate and not havecomment:
+        parser.error("Need year/yearrange or people/location/comment")
     if options.year and options.yearrange:
         parser.error("Specify only year or yearrange, not both")
     if options.yearrange:
@@ -140,20 +142,48 @@ def do_read(args):
         if 'Exif.Photo.UserComment' in metadata.exif_keys:
             tag = metadata['Exif.Photo.UserComment']
             print 'UserComment: %s' % str(tag.value)
+        print ''
+
+def assemble_comment(approximate_date, people, location, comment):
+    """ Assemble Exif comment from named fields and freeform comment
+    """
+    result = ''
+    first = True
+    if comment:
+        result += comment
+        first = False
+    if people:
+        if not first:
+            result += '\n'
+        result += 'People: '
+        result += people
+        first = False
+    if location:
+        if not first:
+            result += '\n'
+        result += 'Location: '
+        result += location
+        first = False
+    if approximate_date:
+        if not first:
+            result += '\n'
+        result += 'ApproximateDate: '
+        result += approximate_date
+    return result
 
 def main():
     """ Entry point
     """
     parser = optparse.OptionParser(usage="usage: %prog [options] filename")
+    parser.add_option('-r', '--read', action='store_true', dest='read')
     parser.add_option('-Y', '--yearrange', action='store', type='string', dest='yearrange')
     parser.add_option('-y', '--year', action='store', type='string', dest='year')
     parser.add_option('-m', '--month', action='store', type='string', dest='month')
     parser.add_option('-d', '--day', action='store', type='string', dest='day')
-    parser.add_option('-r', '--read', action='store_true', dest='read')
+    parser.add_option('-p', '--people', action='store', type='string', dest='people')
+    parser.add_option('-l', '--location', action='store', type='string', dest='location')
+    parser.add_option('-c', '--comment', action='store', type='string', dest='comment')
     (options, args) = parser.parse_args()
-
-    print options
-    print args
 
     if len(args) < 1:
         parser.error("Please supply a photo filename")
@@ -163,12 +193,25 @@ def main():
         do_read(args)
         exit(0)
 
-    exif_datetime = make_exif_datetime(options.yearrange, options.year, options.month, options.day)
-    approximate_date = make_approximate_date(
-        options.yearrange, options.year, options.month, options.day)
+    havedate = options.year or options.yearrange
+    approximate_date = ''
+    if havedate:
+        exif_datetime = make_exif_datetime(
+            options.yearrange, options.year, options.month, options.day)
+        approximate_date = make_approximate_date(
+            options.yearrange, options.year, options.month, options.day)
 
-    print "exif_datetime is %s" % str(exif_datetime)
-    print "approximate_date is %s" % approximate_date
+    final_comment = assemble_comment(
+        approximate_date, options.people, options.location, options.comment)
+    for photo in args:
+        metadata = pyexiv2.ImageMetadata(photo)
+        metadata.read()
+        metadata['Exif.Photo.UserComment'] = final_comment
+        if havedate:
+            metadata['Exif.Photo.DateTimeOriginal'] = exif_datetime
+        metadata.write()
+
+    do_read(args)
 
 if __name__ == '__main__':
     main()
