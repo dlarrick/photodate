@@ -10,6 +10,8 @@ import pyexiv2
 def validate_options(parser, options):
     """ Validate command-line options
     """
+    if options.read:
+        return True
     if not options.year and not options.yearrange:
         parser.error("Need at least year or yearrange")
     if options.year and options.yearrange:
@@ -34,6 +36,8 @@ def validate_options(parser, options):
             parser.error("Day specified without year")
         if not validate_day(options.year, options.month, options.day):
             parser.error("Invalid day")
+
+    return True
 
 def validate_yearrange(yearrange):
     """ Validate yearrange option, must be XXXX-YYYY with X < Y
@@ -121,6 +125,22 @@ def make_approximate_date(yearrange, year, month, day):
         return '%s %s' % (months[int(month)], year)
     return year
 
+def do_read(args):
+    """ Read and print fields of interest:
+    Exif.Photo.DateTimeOriginal
+    Exif.Photo.UserComment
+    """
+    for photo in args:
+        metadata = pyexiv2.ImageMetadata(photo)
+        metadata.read()
+        print photo
+        if 'Exif.Photo.DateTimeOriginal' in metadata.exif_keys:
+            tag = metadata['Exif.Photo.DateTimeOriginal']
+            print 'DateTimeOriginal: %s' % str(tag.value)
+        if 'Exif.Photo.UserComment' in metadata.exif_keys:
+            tag = metadata['Exif.Photo.UserComment']
+            print 'UserComment: %s' % str(tag.value)
+
 def main():
     """ Entry point
     """
@@ -129,14 +149,19 @@ def main():
     parser.add_option('-y', '--year', action='store', type='string', dest='year')
     parser.add_option('-m', '--month', action='store', type='string', dest='month')
     parser.add_option('-d', '--day', action='store', type='string', dest='day')
+    parser.add_option('-r', '--read', action='store_true', dest='read')
     (options, args) = parser.parse_args()
 
     print options
     print args
 
-    if len(args) != 1:
+    if len(args) < 1:
         parser.error("Please supply a photo filename")
     validate_options(parser, options)
+
+    if options.read:
+        do_read(args)
+        exit(0)
 
     exif_datetime = make_exif_datetime(options.yearrange, options.year, options.month, options.day)
     approximate_date = make_approximate_date(
