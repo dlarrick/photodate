@@ -5,13 +5,23 @@ import optparse
 import re
 import math
 import datetime
+import sys
+import optparse_gui
 import pyexiv2
 
-def validate_options(parser, options):
+COMMENT_TAG = 'Exif.Photo.UserComment'
+DATE_TAG = 'Exif.Photo.DateTimeOriginal'
+
+def validate_options(parser, options, args):
     """ Validate command-line options
     """
     if options.read:
         return True
+    if options.copy:
+        if len(args) == 2:
+            return True
+        else:
+            parser.error("Copy needs exactly 2 files")
     havedate = options.year or options.yearrange
     havecomment = options.comment or options.people or options.location
     if not havedate and not havecomment:
@@ -136,13 +146,43 @@ def do_read(args):
         metadata = pyexiv2.ImageMetadata(photo)
         metadata.read()
         print photo
-        if 'Exif.Photo.DateTimeOriginal' in metadata.exif_keys:
-            tag = metadata['Exif.Photo.DateTimeOriginal']
+        try:
+            tag = metadata[DATE_TAG]
             print 'DateTimeOriginal: %s' % str(tag.value)
-        if 'Exif.Photo.UserComment' in metadata.exif_keys:
-            tag = metadata['Exif.Photo.UserComment']
+        except KeyError:
+            pass
+        try:
+            tag = metadata[COMMENT_TAG]
             print 'UserComment: %s' % str(tag.value)
+        except KeyError:
+            pass
         print ''
+
+def do_copy(args):
+    """ Copy relevant tags from one file to another
+    """
+    src_photo = args[0]
+    dst_photo = args[1]
+
+    metadata_src = pyexiv2.ImageMetadata(src_photo)
+    metadata_src.read()
+    metadata_dst = pyexiv2.ImageMetadata(dst_photo)
+    metadata_dst.read()
+
+    print dst_photo
+    try:
+        tag = metadata_src[DATE_TAG]
+        metadata_dst[DATE_TAG] = tag
+        print 'DateTimeOriginsl: %s' % str(tag.value)
+    except KeyError:
+        pass
+    try:
+        tag = metadata_src[COMMENT_TAG]
+        metadata_dst[COMMENT_TAG] = tag
+        print 'UserComment: %s' % str(tag.value)
+    except KeyError:
+        pass
+    metadata_dst.write()
 
 def assemble_comment(approximate_date, people, location, comment):
     """ Assemble Exif comment from named fields and freeform comment
@@ -174,8 +214,16 @@ def assemble_comment(approximate_date, people, location, comment):
 def main():
     """ Entry point
     """
-    parser = optparse.OptionParser(usage="usage: %prog [options] filename")
+
+    if len(sys.argv) == 1:
+        option_parser_class = optparse_gui.OptionParser
+    else:
+        option_parser_class = optparse.OptionParser
+
+    parser = option_parser_class(usage="usage: %prog [options] filename",
+                                 version='0.1')
     parser.add_option('-r', '--read', action='store_true', dest='read')
+    parser.add_option('-C', '--copy', action='store_true', dest='copy')
     parser.add_option('-Y', '--yearrange', action='store', type='string', dest='yearrange')
     parser.add_option('-y', '--year', action='store', type='string', dest='year')
     parser.add_option('-m', '--month', action='store', type='string', dest='month')
@@ -185,9 +233,14 @@ def main():
     parser.add_option('-c', '--comment', action='store', type='string', dest='comment')
     (options, args) = parser.parse_args()
 
+    validate_options(parser, options, args)
+
+    if options.copy:
+        do_copy(args)
+        exit(0)
+
     if len(args) < 1:
-        parser.error("Please supply a photo filename")
-    validate_options(parser, options)
+        parser.error("Please supply a photo filename or list")
 
     if options.read:
         do_read(args)
@@ -206,9 +259,9 @@ def main():
     for photo in args:
         metadata = pyexiv2.ImageMetadata(photo)
         metadata.read()
-        metadata['Exif.Photo.UserComment'] = final_comment
+        metadata[COMMENT_TAG] = final_comment
         if havedate:
-            metadata['Exif.Photo.DateTimeOriginal'] = exif_datetime
+            metadata[DATE_TAG] = exif_datetime
         metadata.write()
 
     do_read(args)
