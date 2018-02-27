@@ -8,6 +8,7 @@ import datetime
 import sys
 import optparse_gui
 import pyexiv2
+from termcolor import cprint
 
 COMMENT_TAG = 'Exif.Photo.UserComment'
 DATE_TAG = 'Exif.Photo.DateTimeOriginal'
@@ -101,9 +102,9 @@ def make_exif_date(yearrange, year, month, day):
             synmonth = 1
             synday = 1
         else:
-            # Even number of years, use June 1
+            # Even number of years, use July 1
             synyear = int(math.floor((float(year2) + float(year1)) / 2))
-            synmonth = 6
+            synmonth = 7
             synday = 1
         trydate = datetime.date(synyear, synmonth, synday)
         return trydate
@@ -114,7 +115,7 @@ def make_exif_date(yearrange, year, month, day):
         synday = 15
         trydate = datetime.date(int(year), int(month), synday)
         return trydate
-    synmonth = 6
+    synmonth = 7
     synday = 1
     trydate = datetime.date(int(year), synmonth, synday)
     return trydate
@@ -128,7 +129,8 @@ def make_exif_datetime(yearrange, year, month, day):
 def make_approximate_date(yearrange, year, month, day):
     """ Construct human approximate date string
     """
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    months = ["0", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     if yearrange:
         return yearrange
     if day:
@@ -143,20 +145,24 @@ def do_read(args):
     Exif.Photo.UserComment
     """
     for photo in args:
-        metadata = pyexiv2.ImageMetadata(photo)
-        metadata.read()
-        print photo
         try:
-            tag = metadata[DATE_TAG]
-            print 'DateTimeOriginal: %s' % str(tag.value)
-        except KeyError:
-            pass
-        try:
-            tag = metadata[COMMENT_TAG]
-            print 'UserComment: %s' % str(tag.value)
-        except KeyError:
-            pass
-        print ''
+            metadata = pyexiv2.ImageMetadata(photo)
+            metadata.read()
+        except IOError:
+            cprint('Error reading %s' % photo, 'red', 'on_yellow')
+        else:
+            print photo
+            try:
+                tag = metadata[DATE_TAG]
+                print 'DateTimeOriginal: %s' % str(tag.value)
+            except KeyError:
+                pass
+            try:
+                tag = metadata[COMMENT_TAG]
+                print 'UserComment: %s' % str(tag.value)
+            except KeyError:
+                pass
+            print ''
 
 def do_copy(args):
     """ Copy relevant tags from one file to another
@@ -164,10 +170,18 @@ def do_copy(args):
     src_photo = args[0]
     dst_photo = args[1]
 
-    metadata_src = pyexiv2.ImageMetadata(src_photo)
-    metadata_src.read()
-    metadata_dst = pyexiv2.ImageMetadata(dst_photo)
-    metadata_dst.read()
+    try:
+        metadata_src = pyexiv2.ImageMetadata(src_photo)
+        metadata_src.read()
+    except IOError:
+        cprint('Error reading %s' % src_photo, 'red', 'on_yellow')
+        exit(1)
+    try:
+        metadata_dst = pyexiv2.ImageMetadata(dst_photo)
+        metadata_dst.read()
+    except IOError:
+        cprint('Error reading %s' % src_photo, 'red', 'on_yellow')
+        exit(1)
 
     print dst_photo
     try:
@@ -257,12 +271,15 @@ def main():
     final_comment = assemble_comment(
         approximate_date, options.people, options.location, options.comment)
     for photo in args:
-        metadata = pyexiv2.ImageMetadata(photo)
-        metadata.read()
-        metadata[COMMENT_TAG] = final_comment
-        if havedate:
-            metadata[DATE_TAG] = exif_datetime
-        metadata.write()
+        try:
+            metadata = pyexiv2.ImageMetadata(photo)
+            metadata.read()
+            metadata[COMMENT_TAG] = final_comment
+            if havedate:
+                metadata[DATE_TAG] = exif_datetime
+            metadata.write()
+        except IOError:
+            cprint('Error modifying %s' % photo, 'red', 'on_yellow')
 
     do_read(args)
 
