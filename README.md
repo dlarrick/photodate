@@ -1,7 +1,8 @@
 # photodate
 Simple script to manage approximate dates in Exif and some structured tags within UserComment
 
-`Usage: photodate [options] filename
+```
+Usage: photodate [options] filename
 
 Options:
   --version             show program's version number and exit
@@ -14,7 +15,8 @@ Options:
   -d DAY, --day=DAY     
   -p PEOPLE, --people=PEOPLE
   -l LOCATION, --location=LOCATION
-  -c COMMENT, --comment=COMMENT`
+  -c COMMENT, --comment=COMMENT
+```
 
 I wrote this script because I am digitizing old family photos and have only approximate date information, but want to
 record with as much accuracy as I have. It calculates the DateTimeOriginal EXIF field as the midpoint of the date given,
