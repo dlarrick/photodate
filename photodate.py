@@ -180,20 +180,20 @@ def do_copy(args):
         metadata_dst = pyexiv2.ImageMetadata(dst_photo)
         metadata_dst.read()
     except IOError:
-        cprint('Error reading %s' % src_photo, 'red', 'on_yellow')
+        cprint('Error reading %s' % dst_photo, 'red', 'on_yellow')
         exit(1)
 
-    print dst_photo
+    print "Writing to %s" % dst_photo
     try:
-        tag = metadata_src[DATE_TAG]
-        metadata_dst[DATE_TAG] = tag
-        print 'DateTimeOriginsl: %s' % str(tag.value)
+        dtag = metadata_src[DATE_TAG]
+        print 'DateTimeOriginal: %s' % str(dtag.value)
+        metadata_dst[DATE_TAG] = str(dtag.value)
     except KeyError:
         pass
     try:
-        tag = metadata_src[COMMENT_TAG]
-        metadata_dst[COMMENT_TAG] = tag
-        print 'UserComment: %s' % str(tag.value)
+        ctag = metadata_src[COMMENT_TAG]
+        print 'UserComment: %s' % str(ctag.value)
+        metadata_dst[COMMENT_TAG] = str(ctag.value)
     except KeyError:
         pass
     metadata_dst.write()
