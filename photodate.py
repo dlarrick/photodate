@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """ Utility to set original date & approximate date in EXIF
 """
 import optparse
@@ -6,7 +6,6 @@ import re
 import math
 import datetime
 import sys
-import optparse_gui
 import pyexiv2
 from termcolor import cprint
 
@@ -151,18 +150,18 @@ def do_read(args):
         except IOError:
             cprint('Error reading %s' % photo, 'red', 'on_yellow')
         else:
-            print photo
+            print(photo)
             try:
                 tag = metadata[DATE_TAG]
-                print 'DateTimeOriginal: %s' % str(tag.value)
+                print('DateTimeOriginal: %s' % str(tag.value))
             except KeyError:
                 pass
             try:
                 tag = metadata[COMMENT_TAG]
-                print 'UserComment: %s' % str(tag.value)
+                print('UserComment: %s' % str(tag.value))
             except KeyError:
                 pass
-            print ''
+            print('')
 
 def do_copy(args):
     """ Copy relevant tags from one file to another
@@ -183,16 +182,16 @@ def do_copy(args):
         cprint('Error reading %s' % dst_photo, 'red', 'on_yellow')
         exit(1)
 
-    print "Writing to %s" % dst_photo
+    print("Writing to %s" % dst_photo)
     try:
         dtag = metadata_src[DATE_TAG]
-        print 'DateTimeOriginal: %s' % str(dtag.value)
+        print('DateTimeOriginal: %s' % str(dtag.value))
         metadata_dst[DATE_TAG] = str(dtag.value)
     except KeyError:
         pass
     try:
         ctag = metadata_src[COMMENT_TAG]
-        print 'UserComment: %s' % str(ctag.value)
+        print('UserComment: %s' % str(ctag.value))
         metadata_dst[COMMENT_TAG] = str(ctag.value)
     except KeyError:
         pass
@@ -229,10 +228,7 @@ def main():
     """ Entry point
     """
 
-    if len(sys.argv) == 1:
-        option_parser_class = optparse_gui.OptionParser
-    else:
-        option_parser_class = optparse.OptionParser
+    option_parser_class = optparse.OptionParser
 
     parser = option_parser_class(usage="usage: %prog [options] filename",
                                  version='0.1')
